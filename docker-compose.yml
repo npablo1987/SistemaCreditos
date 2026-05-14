@@ -1,4 +1,17 @@
 services:
+  frontend:
+    build:
+      context: ./frontendReact
+      dockerfile: Dockerfile
+    container_name: sistema-creditos-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
   backend:
     build:
       context: ./backendFastApi
@@ -38,6 +51,22 @@ services:
       retries: 5
     restart: unless-stopped
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sistema-creditos-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   uploaded_files:
+  pgadmin_data:

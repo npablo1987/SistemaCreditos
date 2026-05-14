@@ -19,6 +19,9 @@ class InstallmentRead(ORMBase):
     installment_number: int
     amount: Decimal
     payment_date: date
+    due_date: date | None
+    is_paid: bool
+    paid_at: datetime | None
     observation: str | None
     receipt_original_name: str | None
     receipt_path: str | None

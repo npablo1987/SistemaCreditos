@@ -47,7 +47,12 @@ def list_loans(
     date_to: date | None = None,
     user_id: int | None = None,
 ) -> list[Loan]:
-    stmt = select(Loan).options(selectinload(Loan.files), selectinload(Loan.deposit_receipt)).order_by(Loan.created_at.desc())
+    stmt = select(Loan).options(
+        selectinload(Loan.files), 
+        selectinload(Loan.deposit_receipt),
+        selectinload(Loan.user),
+        selectinload(Loan.bank_account)
+    ).order_by(Loan.created_at.desc())
     if current_user.role != UserRole.ADMIN:
         stmt = stmt.where(Loan.user_id == current_user.id)
     elif user_id:

@@ -62,6 +62,8 @@ class LoanRead(ORMBase):
     updated_at: datetime | None
     files: list[LoanFileRead] = []
     deposit_receipt: DepositReceiptRead | None = None
+    user: UserRead | None = None
+    bank_account: BankAccountRead | None = None
 
 
 class LoanDetail(LoanRead):

@@ -13,6 +13,7 @@ class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=80)
     phone: str | None = Field(default=None, max_length=40)
     document_id: str = Field(..., min_length=3, max_length=40)
+    rut: str | None = Field(default=None, max_length=12)
     role: UserRole = UserRole.USER
     is_active: bool = True
 
@@ -28,6 +29,7 @@ class UserUpdate(BaseModel):
     username: str | None = Field(default=None, min_length=3, max_length=80)
     phone: str | None = Field(default=None, max_length=40)
     document_id: str | None = Field(default=None, min_length=3, max_length=40)
+    rut: str | None = Field(default=None, max_length=12)
     role: UserRole | None = None
     is_active: bool | None = None
     password: str | None = Field(default=None, min_length=8, max_length=128)
@@ -41,6 +43,7 @@ class UserRead(ORMBase):
     username: str
     phone: str | None
     document_id: str
+    rut: str | None
     role: UserRole
     is_active: bool
     created_at: datetime

@@ -1,15 +1,21 @@
+from datetime import date
+from dateutil.relativedelta import relativedelta
+from decimal import Decimal
+
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.models.bank_account import BankAccount
 from app.models.deposit_receipt import DepositReceipt
 from app.models.enums import LoanStatus, UserRole
+from app.models.installment import Installment
 from app.models.loan import Loan
 from app.models.loan_file import LoanFile
 from app.models.user import User
 from app.schemas.loan import LoanCreate, LoanDeposit, LoanUpdateStatus
 from app.services.email_service import email_service
 from app.services.storage_service import storage_service
+from app.crud import loan_settings as crud_settings
 
 
 def ensure_loan_access(user: User, loan: Loan) -> None:
@@ -66,6 +72,11 @@ async def deposit_loan(db: Session, loan: Loan, data: LoanDeposit, receipt: Uplo
     db.add(loan)
     db.commit()
     db.refresh(loan)
+    
+    # Generar cuotas automáticamente si no existen
+    if not loan.installments:
+        generate_installments(db, loan)
+    
     email_service.send_email(
         db,
         loan.user,
@@ -84,3 +95,41 @@ def update_loan_status(db: Session, loan: Loan, data: LoanUpdateStatus) -> Loan:
     db.commit()
     db.refresh(loan)
     return loan
+
+
+def generate_installments(db: Session, loan: Loan) -> None:
+    """
+    Genera automáticamente las cuotas del préstamo.
+    Cada cuota vence el último día del mes.
+    """
+    # Obtener la tasa de interés de la configuración
+    settings = crud_settings.get_loan_settings(db)
+    interest_rate = float(settings.interest_rate)
+    
+    # Calcular el monto de cada cuota con interés
+    principal = float(loan.amount)
+    total_with_interest = principal * (1 + interest_rate)
+    installment_amount = Decimal(total_with_interest / loan.number_of_installments).quantize(Decimal('0.01'))
+    
+    # Fecha de inicio
+    current_date = loan.payment_start_date
+    
+    # Generar cada cuota
+    for i in range(1, loan.number_of_installments + 1):
+        # Calcular fecha de vencimiento: último día del mes
+        # Avanzar al mes correspondiente
+        due_date = current_date + relativedelta(months=i-1)
+        # Obtener el último día del mes
+        last_day = (due_date + relativedelta(months=1, day=1)) - relativedelta(days=1)
+        
+        installment = Installment(
+            loan_id=loan.id,
+            installment_number=i,
+            amount=installment_amount,
+            payment_date=current_date + relativedelta(months=i-1),
+            due_date=last_day.date() if hasattr(last_day, 'date') else last_day,
+            is_paid=False
+        )
+        db.add(installment)
+    
+    db.commit()

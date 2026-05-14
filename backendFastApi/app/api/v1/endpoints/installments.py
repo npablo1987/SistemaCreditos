@@ -67,3 +67,30 @@ def list_my_paid_installments(db: DbSession, current_user: CurrentUser) -> list[
     if current_user.role != UserRole.ADMIN:
         stmt = stmt.where(Loan.user_id == current_user.id)
     return list(db.scalars(stmt.order_by(Installment.payment_date.desc())))
+
+
+@router.patch("/{installment_id}/mark-paid", response_model=InstallmentRead)
+def mark_installment_as_paid(
+    db: DbSession,
+    _: AdminUser,
+    loan_id: int,
+    installment_id: int
+) -> Installment:
+    """Marca una cuota como pagada"""
+    installment = db.scalar(
+        select(Installment)
+        .where(Installment.id == installment_id, Installment.loan_id == loan_id)
+    )
+    if not installment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cuota no encontrada"
+        )
+    
+    from datetime import datetime
+    installment.is_paid = True
+    installment.paid_at = datetime.now()
+    db.add(installment)
+    db.commit()
+    db.refresh(installment)
+    return installment
